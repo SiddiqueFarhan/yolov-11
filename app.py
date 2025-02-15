@@ -1,48 +1,31 @@
 import streamlit as st
-import cv2
-import torch
+from PIL import Image
 from ultralytics import YOLO
-import numpy as np
 
-# Load the YOLO model
-model = YOLO("yolov8n.pt")  # Change to "yolov11" when available
+# Load the YOLO model variants
+model = YOLO("yolov8n.pt") 
 
-# Streamlit UI
-st.title("Live Object Detection with YOLO")
-st.write("Turn on the webcam and detect objects in real-time.")
+st.title("YOLO Object Detection")
+st.write("Upload an image to detect objects:")
 
-# Start/Stop button
-run = st.checkbox("Start Webcam")
+# File uploader for image
+uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
 
-# Open webcam stream if checkbox is checked
-if run:
-    # OpenCV Video Capture
-    cap = cv2.VideoCapture(0)  # 0 for default webcam
+if uploaded_file is not None:
+    # Open image
+    image = Image.open(uploaded_file)
+    st.image(image, caption="Uploaded Image", use_container_width =True)
+    st.write("Processing...")
 
-    # Create a placeholder for video output
-    frame_placeholder = st.empty()
+    # Run YOLOv8 model on the image
+    results = model(image)
 
-    while cap.isOpened():
-        success, frame = cap.read()
-        if not success:
-            st.error("Failed to access webcam.")
-            break
+    # Get the annotated image with bounding boxes
+    annotated_image = results[0].plot()
 
-        # Convert BGR to RGB for Streamlit
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    # Display the output image with detections
+    st.image(annotated_image, caption="Detected Objects", use_column_width=True)
 
-        # Run YOLO inference
-        results = model(frame_rgb)
-
-        # Draw bounding boxes on the frame
-        annotated_frame = results[0].plot()
-
-        # Display the frame in Streamlit
-        frame_placeholder.image(annotated_frame, channels="RGB", use_column_width=True)
-
-        # Stop if user unchecks the box
-        if not st.session_state["checkbox"]:
-            break
-
-    cap.release()
-    cv2.destroyAllWindows()
+    # Show raw results (optional)
+    st.write("Detection Results:")
+    st.write(results)
